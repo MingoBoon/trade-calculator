@@ -225,6 +225,7 @@
         <div class="rcard r1"><div class="pct">1% · Conservative</div><div class="shares" id="sh1">0</div><div class="sharelbl">shares</div>
           <div class="metric"><span>Risk amount</span><span id="ra1">—</span></div>
           <div class="metric"><span>Position value</span><span id="pv1">—</span></div>
+          <div class="metric"><span>Shares to buy</span><span id="sm1">—</span></div>
           <div class="metric cost"><span>Trading cost</span><span id="tc1">—</span></div>
           <div class="metric"><span>Break-even move</span><span id="be1">—</span></div>
           <div class="metric hl"><span>Exit (net of cost)</span><span id="xp1">—</span></div>
@@ -234,6 +235,7 @@
         <div class="rcard r2"><div class="pct">2% · Moderate</div><div class="shares" id="sh2">0</div><div class="sharelbl">shares</div>
           <div class="metric"><span>Risk amount</span><span id="ra2">—</span></div>
           <div class="metric"><span>Position value</span><span id="pv2">—</span></div>
+          <div class="metric"><span>Shares to buy</span><span id="sm2">—</span></div>
           <div class="metric cost"><span>Trading cost</span><span id="tc2">—</span></div>
           <div class="metric"><span>Break-even move</span><span id="be2">—</span></div>
           <div class="metric hl"><span>Exit (net of cost)</span><span id="xp2">—</span></div>
@@ -243,6 +245,7 @@
         <div class="rcard r3"><div class="pct">3% · Aggressive</div><div class="shares" id="sh3">0</div><div class="sharelbl">shares</div>
           <div class="metric"><span>Risk amount</span><span id="ra3">—</span></div>
           <div class="metric"><span>Position value</span><span id="pv3">—</span></div>
+          <div class="metric"><span>Shares to buy</span><span id="sm3">—</span></div>
           <div class="metric cost"><span>Trading cost</span><span id="tc3">—</span></div>
           <div class="metric"><span>Break-even move</span><span id="be3">—</span></div>
           <div class="metric hl"><span>Exit (net of cost)</span><span id="xp3">—</span></div>
@@ -380,6 +383,7 @@ function calc(){
     $('sh'+p).textContent=sh.toLocaleString('en-GB');
     $('ra'+p).textContent=fmt(riskAmt,sym);
     $('pv'+p).textContent=fmt(posVal,sym);
+    $('sm'+p).textContent=sh>0?sh.toLocaleString('en-GB'):'—';
     $('tc'+p).textContent=sh>0?fmt(cost.total,sym):'—';
     $('be'+p).textContent=(sh>0&&posVal>0)?(cost.total/posVal*100).toFixed(2)+'%':'—';
     $('xp'+p).textContent=isFinite(exitPx)&&exitPx>0?fmt(exitPx,sym,dpPrice):'—';
@@ -549,6 +553,6 @@ $('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')fetchPrice();});
 $('market').addEventListener('change',()=>{const m=$('market').value;$('ukStamp').checked=m==='.L';if(m!=='raw')$('fxOn').checked=m!=='.L';calc();});
 calc();
 </script>
-<p style="text-align:center;font-size:11px;color:#4a5568;margin-top:32px">v1.0.3</p>
+<p style="text-align:center;font-size:11px;color:#4a5568;margin-top:32px">v1.0.4</p>
 </body>
 </html>
