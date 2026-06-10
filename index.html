@@ -4,12 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Position Size & Risk Calculator</title>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'dark');</script>
 <style>
-  :root{
+  :root,[data-theme="dark"]{
     --bg:#0f1419; --panel:#1a2129; --panel2:#222b35; --line:#2f3a45;
     --txt:#e6edf3; --muted:#8b98a5; --accent:#3fb950; --accent2:#58a6ff;
     --warn:#d29922; --danger:#f85149; --gold:#e3b341;
     --c1:#3fb950; --c2:#d29922; --c3:#f85149;
+  }
+  [data-theme="light"]{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#edf0f3; --line:#d0d7de;
+    --txt:#1f2328; --muted:#57606a; --accent:#1a7f37; --accent2:#0969da;
+    --warn:#9a6700; --danger:#d1242f; --gold:#9a6700;
+    --c1:#1a7f37; --c2:#9a6700; --c3:#d1242f;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -86,6 +93,10 @@
   .recrow .cstat{font-size:12px;color:var(--muted);margin-top:2px}
   .recrow .cbreak{font-size:11.5px;color:var(--muted);margin-top:8px;border-top:1px solid var(--line);padding-top:8px;line-height:1.7}
   footer{color:var(--muted);font-size:12px;margin-top:8px;text-align:center}
+  .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .page-header h1{margin-bottom:0}
+  .theme-toggle{background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:20px;padding:5px 14px;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .theme-toggle:hover{background:var(--line)}
 
   .stockdetail{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:20px}
   .sd-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px}
@@ -104,7 +115,10 @@
 </style>
 </head>
 <body>
-  <h1>Position Size, Risk &amp; True-Cost Calculator</h1>
+  <div class="page-header">
+    <h1>Position Size, Risk &amp; True-Cost Calculator</h1>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()"></button>
+  </div>
   <p class="sub">Pull a live price, size the trade to a fixed % risk, and see the <i>real</i> cost after broker fees, FX, stamp duty &amp; spread — with a recommended broker for the trade.</p>
 
   <!-- LIVE PRICE BAR -->
@@ -522,10 +536,19 @@ function renderStockInfo(d,ps){
   el.style.display='block';
 }
 
+function toggleTheme(){
+  const next=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';
+  document.documentElement.setAttribute('data-theme',next);
+  $('themeToggle').textContent=next==='light'?'☾ Dark':'☀ Light';
+  localStorage.setItem('theme',next);
+}
+(function(){const t=document.documentElement.getAttribute('data-theme')||'dark';$('themeToggle').textContent=t==='light'?'☾ Dark':'☀ Light';})();
+
 document.querySelectorAll('input,select').forEach(el=>{el.addEventListener('input',calc);el.addEventListener('change',calc);});
 $('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')fetchPrice();});
 $('market').addEventListener('change',()=>{const m=$('market').value;$('ukStamp').checked=m==='.L';if(m!=='raw')$('fxOn').checked=m!=='.L';calc();});
 calc();
 </script>
+<p style="text-align:center;font-size:11px;color:#4a5568;margin-top:32px">v1.0.2</p>
 </body>
 </html>
