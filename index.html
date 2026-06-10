@@ -86,6 +86,21 @@
   .recrow .cstat{font-size:12px;color:var(--muted);margin-top:2px}
   .recrow .cbreak{font-size:11.5px;color:var(--muted);margin-top:8px;border-top:1px solid var(--line);padding-top:8px;line-height:1.7}
   footer{color:var(--muted);font-size:12px;margin-top:8px;text-align:center}
+
+  .stockdetail{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:20px}
+  .sd-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+  .sd-name{font-size:20px;font-weight:700;line-height:1.2}
+  .sd-chg{font-size:15px;font-weight:700}
+  .sd-chg.up{color:var(--accent)} .sd-chg.down{color:var(--danger)}
+  .sd-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .sd-tag{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  .sd-desc{font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .sd-metrics{display:flex;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+  .sd-m{flex:1 1 130px;padding:6px 12px;border-right:1px solid var(--line)}
+  .sd-m:last-child{border-right:none}
+  .sd-m .ml{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .sd-m .mv{font-size:13.5px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+  @media(max-width:760px){.sd-m{flex-basis:40%;border-right:none;border-bottom:1px solid var(--line)}}
 </style>
 </head>
 <body>
@@ -121,6 +136,17 @@
     </div>
   </div>
 
+  <!-- STOCK DETAIL -->
+  <div class="stockdetail" id="stockDetail" style="display:none">
+    <div class="sd-top">
+      <div class="sd-name" id="sdName">—</div>
+      <div class="sd-chg" id="sdChg"></div>
+    </div>
+    <div class="sd-tags" id="sdTags"></div>
+    <div class="sd-desc" id="sdDesc"></div>
+    <div class="sd-metrics" id="sdMetrics"></div>
+  </div>
+
   <div class="grid">
     <!-- LEFT: INPUTS -->
     <div>
@@ -134,7 +160,7 @@
         </select>
 
         <label>Account size</label>
-        <div class="pfx"><span class="csym">£</span><input id="acct" type="number" value="10000" min="0" step="100"></div>
+        <div class="pfx"><span class="csym">£</span><input id="acct" type="number" value="2000" min="0" step="100"></div>
 
         <label>Trade direction</label>
         <div class="dir">
@@ -325,11 +351,12 @@ function calc(){
     // exit price to NET desiredProfit after all costs
     let exitPx=NaN, movePct=NaN, rr=NaN;
     if(sh>0 && desiredProfit>0){
-      const fixed=cost.commission+cost.stamp+cost.ptm+cost.spread; // value-independent-ish part
+      const fixed=cost.commission+cost.stamp+cost.ptm;
       const k=opts.fx?b.fx:0;
+      const s=opts.spreadPct/100;
       let sellVal;
-      if(dir==='long') sellVal=(desiredProfit+posVal+fixed+k*posVal)/(1-k);
-      else             sellVal=(posVal-desiredProfit-fixed-k*posVal)/(1+k);
+      if(dir==='long') sellVal=(desiredProfit+posVal*(1+k+s/2)+fixed)/(1-k-s/2);
+      else             sellVal=(posVal*(1-k-s/2)-desiredProfit-fixed)/(1+k+s/2);
       exitPx=sellVal/sh;
       const perShareGain=Math.abs(exitPx-entry);
       movePct=entry>0?perShareGain/entry*100:NaN;
@@ -358,9 +385,11 @@ function recommend(acct,entry,rps,opts,sym){
   const list=$('recList');
   if(shares<=0||posVal<=0){list.innerHTML='<div style="color:var(--muted);font-size:13px">Enter valid entry &amp; stop to rank brokers.</div>';$('recWhy').textContent='';return;}
 
-  const ranked=Object.keys(BROKERS).filter(k=>k!=='custom').map(k=>{
-    const c=tradeCost(BROKERS[k],posVal,opts);
-    return {k,name:BROKERS[k].name,cost:c};
+  const sel=$('broker').value;
+  const ranked=Object.keys(BROKERS).filter(k=>k!=='custom'||sel==='custom').map(k=>{
+    const b=k==='custom'?brokerParams('custom'):BROKERS[k];
+    const c=tradeCost(b,posVal,opts);
+    return {k,name:b.name,cost:c};
   }).sort((a,b)=>a.cost.total-b.cost.total);
 
   list.innerHTML=ranked.slice(0,4).map((r,i)=>{
@@ -407,22 +436,95 @@ async function fetchPrice(){
       const symMap={GBP:'£',USD:'$',CAD:'C$',EUR:'€',AUD:'A$'};const ps=symMap[cur]||'';const dp=price<10?3:2;
       $('livePrice').textContent=ps+price.toLocaleString('en-GB',{minimumFractionDigits:dp,maximumFractionDigits:dp});
       const when=new Date((m.regularMarketTime||Date.now()/1000)*1000).toLocaleString('en-GB');
-      $('liveStat').innerHTML=(m.symbol||t)+' · '+cur+' · '+when;
+      $('liveStat').textContent=(m.symbol||t)+' · '+cur+' · '+when;
       if(symMap[cur])$('ccy').value=symMap[cur];
       $('entry').value=price.toFixed(dp);
       // auto-set toggles: FX if not GBP, stamp only if GBP
       $('fxOn').checked = (cur!=='GBP');
       $('ukStamp').checked = (cur==='GBP' && market==='.L');
-      calc();btn.disabled=false;btn.textContent='Get live price';return;
+      calc();btn.disabled=false;btn.textContent='Get live price';
+      fetchStockInfo(t).then(d=>renderStockInfo(d,ps||$('ccy').value));
+      return;
     }catch(e){}
   }
-  $('liveStat').textContent='Couldn’t fetch automatically (browser/proxy blocked). Type the entry price manually.';
+  $('liveStat').textContent='Couldn\'t fetch automatically (browser/proxy blocked). Type the entry price manually.';
   btn.disabled=false;btn.textContent='Get live price';
+  $('stockDetail').style.display='none';
+}
+
+/* ---- stock detail ---- */
+function fmtBig(n){if(!n||!isFinite(n))return'—';if(n>=1e12)return(n/1e12).toFixed(2)+'T';if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return n.toFixed(0);}
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function fetchStockInfo(t){
+  const qurl='https://query1.finance.yahoo.com/v10/finance/quoteSummary/'+encodeURIComponent(t)+'?modules=price,summaryDetail,assetProfile,defaultKeyStatistics';
+  const proxies=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u),u=>'https://thingproxy.freeboard.io/fetch/'+u];
+  for(const make of proxies){
+    try{
+      const r=await fetch(make(qurl));if(!r.ok)continue;
+      const j=await r.json();
+      const res=j.quoteSummary&&!j.quoteSummary.error&&j.quoteSummary.result;
+      if(res&&res[0])return res[0];
+    }catch(e){}
+  }
+  return null;
+}
+
+function renderStockInfo(d,ps){
+  const el=$('stockDetail');
+  if(!d){el.style.display='none';return;}
+  const pr=d.price||{},sd=d.summaryDetail||{},ap=d.assetProfile||{},ks=d.defaultKeyStatistics||{};
+  const raw=v=>v&&v.raw!=null?v.raw:null;
+
+  $('sdName').textContent=pr.longName||pr.shortName||'—';
+
+  const chgR=raw(pr.regularMarketChangePercent);
+  const chgEl=$('sdChg');
+  if(chgR!=null){chgEl.textContent=(chgR>=0?'+':'')+((chgR*100).toFixed(2))+'%';chgEl.className='sd-chg '+(chgR>=0?'up':'down');}
+  else chgEl.textContent='';
+
+  const tags=[];
+  if(pr.quoteType)tags.push(pr.quoteType);
+  if(pr.exchange)tags.push(pr.exchange);
+  if(ap.sector)tags.push(ap.sector);
+  if(ap.industry&&ap.industry!==ap.sector)tags.push(ap.industry);
+  if(ap.country)tags.push(ap.country);
+  $('sdTags').innerHTML=tags.map(t=>'<span class="sd-tag">'+escH(t)+'</span>').join('');
+
+  $('sdDesc').textContent=ap.longBusinessSummary||'';
+
+  const vol=raw(pr.regularMarketVolume)||raw(sd.volume);
+  const avgVol=raw(sd.averageVolume)||raw(sd.averageVolume10Day);
+  const volRatio=vol&&avgVol?vol/avgVol:null;
+  const mcap=raw(pr.marketCap);
+  const lo52=raw(sd.fiftyTwoWeekLow),hi52=raw(sd.fiftyTwoWeekHigh);
+  const pe=raw(sd.trailingPE),fwdPe=raw(ks.forwardPE);
+  const divY=raw(sd.dividendYield);
+  const beta=raw(sd.beta);
+  const instH=raw(ks.institutionsPercentHeld),insH=raw(ks.heldPercentInsiders),shortF=raw(ks.shortPercentOfFloat);
+  const emp=ap.fullTimeEmployees;
+
+  const dp2=v=>v<10?v.toFixed(3):v.toFixed(2);
+  const metrics=[
+    ['Market cap',        mcap?ps+fmtBig(mcap):'—'],
+    ['Volume / flow',     vol?vol.toLocaleString('en-GB')+(volRatio?' · '+volRatio.toFixed(1)+'× avg':''):'—'],
+    ['52-wk range',       lo52&&hi52?ps+dp2(lo52)+' – '+ps+dp2(hi52):'—'],
+    ['P/E (ttm / fwd)',   pe?pe.toFixed(1)+(fwdPe?' / '+fwdPe.toFixed(1):''):'—'],
+    ['Dividend yield',    divY?(divY*100).toFixed(2)+'%':'—'],
+    ['Beta',              beta?beta.toFixed(2):'—'],
+    ['Inst. ownership',   instH?(instH*100).toFixed(1)+'%':'—'],
+    ['Insider ownership', insH?(insH*100).toFixed(1)+'%':'—'],
+    ['Short interest',    shortF?(shortF*100).toFixed(1)+'% of float':'—'],
+    ['Employees',         emp?emp.toLocaleString('en-GB'):'—'],
+  ].filter(([,v])=>v!=='—');
+
+  $('sdMetrics').innerHTML=metrics.map(([l,v])=>'<div class="sd-m"><div class="ml">'+escH(l)+'</div><div class="mv">'+escH(v)+'</div></div>').join('');
+  el.style.display='block';
 }
 
 document.querySelectorAll('input,select').forEach(el=>{el.addEventListener('input',calc);el.addEventListener('change',calc);});
 $('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')fetchPrice();});
-$('market').addEventListener('change',()=>{ $('ukStamp').checked=$('market').value==='.L'; $('fxOn').checked=!['.L'].includes($('market').value)&&$('market').value!=='raw'&&$('market').value!==''?true:$('fxOn').checked; });
+$('market').addEventListener('change',()=>{const m=$('market').value;$('ukStamp').checked=m==='.L';if(m!=='raw')$('fxOn').checked=m!=='.L';calc();});
 calc();
 </script>
 </body>

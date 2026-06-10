@@ -7,7 +7,7 @@ status: research-reference
 
 # UK Brokerage Cost Deep Dive
 
-> **Purpose:** Catalogue every cost attached to a UK share/ETF trade, broker by broker, so we can build a *true cost-per-trade* model into the [[Position-Size-Risk-Calculator]] dashboard.
+> **Purpose:** Catalogue every cost attached to a UK share/ETF trade, broker by broker, to power the true cost-per-trade model in the Position Size & Risk Calculator (`index.html`).
 >
 > **Data as of:** June 2026. Fees change often — always confirm on the broker's own charges page before opening an account. Sources listed at the bottom.
 
@@ -147,7 +147,9 @@ netProfit      = (sellValue - buyValue) - totalCost
 breakevenMove  = totalCost / shares     // pence the price must move just to cover costs
 ```
 
-### Per-broker parameters to store (a dropdown in the dashboard):
+> **Status:** fully implemented in `index.html`. The broker dropdown, spread input, FX toggle, stamp duty toggle and exit-price calculation are all live. The exit price formula correctly splits spread cost across the buy and sell legs so the sell-side spread scales with the exit value.
+
+### Per-broker parameters (implemented in the dashboard dropdown):
 
 | Broker | buyCommission | sellCommission | fxRate | passesStampDuty | platformFee |
 |--------|--------------|----------------|--------|-----------------|-------------|
@@ -163,7 +165,7 @@ breakevenMove  = totalCost / shares     // pence the price must move just to cov
 | Halifax | 9.50 | 9.50 | n/a | yes | £36/yr |
 | Interactive Brokers | ~1.00 | ~1.00 | 0.0003 | yes | 0 |
 
-> **Next step:** add a "Broker" dropdown + bid/ask inputs to the dashboard, then surface `totalCost`, `netProfit` and `breakevenMove` so the exit-for-profit price already includes real costs.
+> Custom broker entry is also supported — select "Custom" to enter your own commission and FX rate and see it ranked alongside the presets.
 
 ---
 
