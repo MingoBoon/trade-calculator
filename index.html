@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Position Size & Risk Calculator</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2129; --panel2:#222b35; --line:#2f3a45;
+    --txt:#e6edf3; --muted:#8b98a5; --accent:#3fb950; --accent2:#58a6ff;
+    --warn:#d29922; --danger:#f85149; --gold:#e3b341;
+    --c1:#3fb950; --c2:#d29922; --c3:#f85149;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--txt);line-height:1.5;padding:24px;max-width:1100px;margin:0 auto}
+  h1{font-size:24px;font-weight:650;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:20px}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:20px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px}
+  .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;font-weight:600}
+  .card h2 small{text-transform:none;letter-spacing:0;font-weight:400;color:var(--muted)}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;margin-top:14px}
+  label:first-of-type{margin-top:0}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+    color:var(--txt);padding:10px 12px;font-size:15px;font-variant-numeric:tabular-nums}
+  input:focus,select:focus{outline:none;border-color:var(--accent2)}
+  .row{display:flex;gap:10px}
+  .row>div{flex:1}
+  .pfx{position:relative}
+  .pfx span{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none}
+  .pfx input{padding-left:30px}
+  .chk{display:flex;align-items:center;gap:9px;margin-top:12px;cursor:pointer}
+  .chk input{width:auto}
+  .chk span{font-size:13px;color:var(--txt)}
+
+  .ticker-bar{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:20px;
+    display:grid;grid-template-columns:1.2fr .8fr auto 1fr;gap:14px;align-items:end}
+  @media(max-width:760px){.ticker-bar{grid-template-columns:1fr 1fr}}
+  .ticker-bar label{margin-top:0}
+  .btn{background:var(--accent2);border:none;color:#0f1419;font-weight:600;padding:10px 16px;border-radius:8px;cursor:pointer;font-size:14px;white-space:nowrap}
+  .btn:hover{filter:brightness(1.08)} .btn:disabled{opacity:.5;cursor:default}
+  .price-readout{text-align:right}
+  .price-readout .big{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+  .price-readout .stat{font-size:12px;color:var(--muted);margin-top:2px}
+  .price-readout .up{color:var(--accent)} .price-readout .down{color:var(--danger)}
+
+  .results{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:520px){.results{grid-template-columns:1fr}}
+  .rcard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px;border-top:3px solid}
+  .rcard.r1{border-top-color:var(--c1)} .rcard.r2{border-top-color:var(--c2)} .rcard.r3{border-top-color:var(--c3)}
+  .rcard .pct{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .rcard .shares{font-size:28px;font-weight:700;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+  .rcard .sharelbl{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .metric{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-top:1px solid var(--line)}
+  .metric span:first-child{color:var(--muted)}
+  .metric span:last-child{font-variant-numeric:tabular-nums;font-weight:500}
+  .metric.hl span:last-child{color:var(--accent)}
+  .metric.cost span:last-child{color:var(--warn)}
+  .summary{display:flex;flex-wrap:wrap;gap:20px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .summary div{font-size:13px;color:var(--muted)}
+  .summary b{display:block;color:var(--txt);font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+  .dir{display:flex;gap:8px;margin-top:6px}
+  .dir button{flex:1;padding:9px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}
+  .dir button.on{background:rgba(63,185,80,.15);border-color:var(--accent);color:var(--accent)}
+  .dir button.on.short{background:rgba(248,81,73,.15);border-color:var(--danger);color:var(--danger)}
+  .seg{display:flex;margin-top:6px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{flex:1;padding:8px;background:var(--panel2);border:none;color:var(--muted);cursor:pointer;font-size:13px;font-weight:600}
+  .seg button.on{background:var(--accent2);color:#0f1419}
+  .note{font-size:12px;color:var(--muted);margin-top:16px;padding:12px;background:var(--panel2);border-radius:8px;border-left:3px solid var(--warn)}
+  .flag{color:var(--danger);font-size:12px;margin-top:8px;display:none}
+  .flag.show{display:block}
+
+  .brokerinfo{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:12px;font-size:12.5px;display:flex;flex-wrap:wrap;gap:14px}
+  .brokerinfo div{color:var(--muted)} .brokerinfo b{color:var(--txt);display:block;font-size:14px;font-variant-numeric:tabular-nums}
+
+  /* recommended broker */
+  .rec{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .recrow{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;position:relative}
+  .recrow.best{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .recrow .rank{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .recrow .bname{font-size:16px;font-weight:650;margin:2px 0 8px}
+  .recrow .badge{position:absolute;top:12px;right:12px;background:var(--gold);color:#0f1419;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase}
+  .recrow .cnum{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+  .recrow .cstat{font-size:12px;color:var(--muted);margin-top:2px}
+  .recrow .cbreak{font-size:11.5px;color:var(--muted);margin-top:8px;border-top:1px solid var(--line);padding-top:8px;line-height:1.7}
+  footer{color:var(--muted);font-size:12px;margin-top:8px;text-align:center}
+</style>
+</head>
+<body>
+  <h1>Position Size, Risk &amp; True-Cost Calculator</h1>
+  <p class="sub">Pull a live price, size the trade to a fixed % risk, and see the <i>real</i> cost after broker fees, FX, stamp duty &amp; spread — with a recommended broker for the trade.</p>
+
+  <!-- LIVE PRICE BAR -->
+  <div class="ticker-bar">
+    <div>
+      <label>Ticker symbol</label>
+      <input id="ticker" type="text" value="VOD.L" placeholder="e.g. VOD.L, LLOY.L, AAPL, SHOP.TO">
+    </div>
+    <div>
+      <label>Market</label>
+      <select id="market">
+        <option value=".L">London (LSE)</option>
+        <option value="">US (NYSE / Nasdaq)</option>
+        <option value=".TO">Canada – Toronto (TSX)</option>
+        <option value=".V">Canada – TSX Venture</option>
+        <option value=".NE">Canada – Cboe (NEO)</option>
+        <option value=".AX">Australia (ASX)</option>
+        <option value=".IR">Ireland (Euronext Dublin)</option>
+        <option value=".PA">France (Euronext Paris)</option>
+        <option value=".DE">Germany (Xetra)</option>
+        <option value=".AS">Netherlands (Euronext)</option>
+        <option value="raw">Other / type full symbol</option>
+      </select>
+    </div>
+    <div><button class="btn" id="fetchBtn" onclick="fetchPrice()">Get live price</button></div>
+    <div class="price-readout">
+      <div class="big" id="livePrice">—</div>
+      <div class="stat" id="liveStat">Enter a ticker and press Get live price</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: INPUTS -->
+    <div>
+      <div class="card">
+        <h2>Trade setup</h2>
+        <label>Display currency</label>
+        <select id="ccy">
+          <option value="£">£ GBP</option><option value="$">$ USD</option>
+          <option value="C$">C$ CAD</option><option value="€">€ EUR</option>
+          <option value="A$">A$ AUD</option>
+        </select>
+
+        <label>Account size</label>
+        <div class="pfx"><span class="csym">£</span><input id="acct" type="number" value="10000" min="0" step="100"></div>
+
+        <label>Trade direction</label>
+        <div class="dir">
+          <button id="long" class="on" onclick="setDir('long')">Long</button>
+          <button id="short" onclick="setDir('short')">Short</button>
+        </div>
+
+        <div class="row">
+          <div><label>Entry price</label><div class="pfx"><span class="csym">£</span><input id="entry" type="number" value="0.75" min="0" step="0.001"></div></div>
+          <div><label>Stop-loss price</label><div class="pfx"><span class="csym">£</span><input id="stop" type="number" value="0.70" min="0" step="0.001"></div></div>
+        </div>
+        <div class="flag" id="stopFlag"></div>
+
+        <label>Desired profit</label>
+        <div class="pfx"><span class="csym" id="profSym">£</span><input id="profit" type="number" value="400" min="0" step="10"></div>
+        <div class="seg">
+          <button id="modeAmt" class="on" onclick="setProfitMode('amt')">£ amount</button>
+          <button id="modePct" onclick="setProfitMode('pct')">% of account</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Broker &amp; costs</h2>
+        <label>Broker</label>
+        <select id="broker"></select>
+
+        <div id="customFees" style="display:none">
+          <div class="row" style="margin-top:4px">
+            <div><label>Commission / leg</label><div class="pfx"><span class="csym">£</span><input id="custComm" type="number" value="0" min="0" step="0.01"></div></div>
+            <div><label>FX fee %</label><div class="pfx" style="--x:0"><span>%</span><input id="custFx" type="number" value="0" min="0" step="0.01" style="padding-left:30px"></div></div>
+          </div>
+        </div>
+
+        <label>Round-trip spread % <small style="color:var(--muted)">(key for cheap/illiquid stocks)</small></label>
+        <div class="pfx"><span>%</span><input id="spread" type="number" value="0" min="0" step="0.1" style="padding-left:30px"></div>
+
+        <label class="chk"><input type="checkbox" id="ukStamp" checked onchange="calc()"><span>Apply UK Stamp Duty 0.5% on buy <small style="color:var(--muted)">— untick for AIM, ETFs &amp; non-UK</small></span></label>
+        <label class="chk"><input type="checkbox" id="fxOn" onchange="calc()"><span>Foreign-currency trade — apply broker FX fee</span></label>
+
+        <div class="brokerinfo" id="brokerInfo"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div class="card">
+      <h2>Position, exit &amp; true cost <small>at each risk level</small></h2>
+      <div class="results">
+        <div class="rcard r1"><div class="pct">1% · Conservative</div><div class="shares" id="sh1">0</div><div class="sharelbl">shares</div>
+          <div class="metric"><span>Risk amount</span><span id="ra1">—</span></div>
+          <div class="metric"><span>Position value</span><span id="pv1">—</span></div>
+          <div class="metric cost"><span>Trading cost</span><span id="tc1">—</span></div>
+          <div class="metric"><span>Break-even move</span><span id="be1">—</span></div>
+          <div class="metric hl"><span>Exit (net of cost)</span><span id="xp1">—</span></div>
+          <div class="metric"><span>Move needed</span><span id="mv1">—</span></div>
+          <div class="metric"><span>Reward : Risk</span><span id="rr1">—</span></div>
+        </div>
+        <div class="rcard r2"><div class="pct">2% · Moderate</div><div class="shares" id="sh2">0</div><div class="sharelbl">shares</div>
+          <div class="metric"><span>Risk amount</span><span id="ra2">—</span></div>
+          <div class="metric"><span>Position value</span><span id="pv2">—</span></div>
+          <div class="metric cost"><span>Trading cost</span><span id="tc2">—</span></div>
+          <div class="metric"><span>Break-even move</span><span id="be2">—</span></div>
+          <div class="metric hl"><span>Exit (net of cost)</span><span id="xp2">—</span></div>
+          <div class="metric"><span>Move needed</span><span id="mv2">—</span></div>
+          <div class="metric"><span>Reward : Risk</span><span id="rr2">—</span></div>
+        </div>
+        <div class="rcard r3"><div class="pct">3% · Aggressive</div><div class="shares" id="sh3">0</div><div class="sharelbl">shares</div>
+          <div class="metric"><span>Risk amount</span><span id="ra3">—</span></div>
+          <div class="metric"><span>Position value</span><span id="pv3">—</span></div>
+          <div class="metric cost"><span>Trading cost</span><span id="tc3">—</span></div>
+          <div class="metric"><span>Break-even move</span><span id="be3">—</span></div>
+          <div class="metric hl"><span>Exit (net of cost)</span><span id="xp3">—</span></div>
+          <div class="metric"><span>Move needed</span><span id="mv3">—</span></div>
+          <div class="metric"><span>Reward : Risk</span><span id="rr3">—</span></div>
+        </div>
+      </div>
+      <div class="summary">
+        <div>Risk / share<b id="rps">—</b></div>
+        <div>Stop distance<b id="sd">—</b></div>
+        <div>Target profit<b id="tgt">—</b></div>
+      </div>
+      <div class="note" style="border-left-color:var(--accent2)">"Exit (net of cost)" is the price you must sell at to bank your target profit <i>after</i> every fee. "Break-even move" is how far price must move just to cover costs — watch this on cheap stocks where spread dominates.</div>
+    </div>
+  </div>
+
+  <!-- RECOMMENDED BROKER -->
+  <div class="card">
+    <h2>Recommended broker <small>for this trade — cheapest round-trip on the 2% position (<span id="recCtx">—</span>)</small></h2>
+    <div class="rec" id="recList"></div>
+    <div class="note" id="recWhy" style="border-left-color:var(--gold)"></div>
+  </div>
+
+  <footer>Educational tool, not financial advice. Fee data ≈ June 2026 (see UK-Brokerage-Cost-Deep-Dive). Live prices are delayed; verify costs with your broker before trading.</footer>
+
+<script>
+/* ---- broker fee presets (see UK-Brokerage-Cost-Deep-Dive.md) ---- */
+const BROKERS = {
+  t212:      {name:'Trading 212',          buyC:0,    sellC:0,    fx:0.0015, platform:'Free'},
+  lightyear: {name:'Lightyear',            buyC:0,    sellC:0,    fx:0.0010, platform:'Free'},
+  ibkr:      {name:'Interactive Brokers',  buyC:1.00, sellC:1.00, fx:0.0003, platform:'Free'},
+  ig:        {name:'IG (share dealing)',   buyC:0,    sellC:0,    fx:0.0070, platform:'Free GIA'},
+  freetradeB:{name:'Freetrade (Basic)',    buyC:0,    sellC:0,    fx:0.0099, platform:'Free'},
+  freetradeP:{name:'Freetrade (Plus)',     buyC:0,    sellC:0,    fx:0.0039, platform:'£9.99/mo'},
+  ii:        {name:'interactive investor', buyC:3.99, sellC:3.99, fx:0.0145, platform:'£4.99+/mo'},
+  ajbell:    {name:'AJ Bell',              buyC:5.00, sellC:5.00, fx:0.0075, platform:'0.25%/yr'},
+  iweb:      {name:'iWeb',                  buyC:5.00, sellC:5.00, fx:0.0150, platform:'Free'},
+  hl:        {name:'Hargreaves Lansdown',  buyC:6.95, sellC:6.95, fx:0.0100, platform:'0.35%/yr'},
+  halifax:   {name:'Halifax',              buyC:9.50, sellC:9.50, fx:0.0150, platform:'£36/yr'},
+  custom:    {name:'Custom (enter below)', buyC:0,    sellC:0,    fx:0,      platform:'—', custom:true}
+};
+
+let dir='long', profitMode='amt';
+const $=id=>document.getElementById(id);
+const levels=[1,2,3];
+
+/* populate broker dropdown */
+(function(){
+  const sel=$('broker');
+  for(const k in BROKERS){const o=document.createElement('option');o.value=k;o.textContent=BROKERS[k].name;sel.appendChild(o);}
+  sel.value='t212';
+  sel.addEventListener('change',()=>{ $('customFees').style.display = sel.value==='custom'?'block':'none'; calc(); });
+})();
+
+function setDir(d){dir=d;$('long').className=d==='long'?'on':'';$('short').className=d==='short'?'on short':'';calc();}
+function setProfitMode(m){profitMode=m;$('modeAmt').className=m==='amt'?'on':'';$('modePct').className=m==='pct'?'on':'';$('profSym').textContent=m==='amt'?$('ccy').value:'%';calc();}
+function fmt(n,sym,dp){if(!isFinite(n))return '—';dp=dp==null?2:dp;return sym+n.toLocaleString('en-GB',{minimumFractionDigits:dp,maximumFractionDigits:dp});}
+
+/* broker params honouring custom override */
+function brokerParams(key){
+  const b=BROKERS[key];
+  if(b.custom) return {name:b.name, buyC:parseFloat($('custComm').value)||0, sellC:parseFloat($('custComm').value)||0, fx:(parseFloat($('custFx').value)||0)/100, platform:b.platform};
+  return b;
+}
+
+/* round-trip cost of trading a position (buy + sell at ~position value) */
+function tradeCost(b, posVal, opts){
+  const commission = b.buyC + b.sellC;
+  const stamp = opts.stamp ? 0.005*posVal : 0;            // buy leg only, UK main market
+  const ptm   = (posVal>10000?1:0)*2;                     // £1 each leg if >£10k
+  const fx    = opts.fx ? b.fx*posVal*2 : 0;              // both legs
+  const spread= (opts.spreadPct/100)*posVal;             // round trip
+  const total = commission+stamp+ptm+fx+spread;
+  return {commission,stamp,ptm,fx,spread,total};
+}
+
+function calc(){
+  const sym=$('ccy').value;
+  document.querySelectorAll('.csym').forEach(e=>{if(e.id!=='profSym')e.textContent=sym;});
+  if(profitMode==='amt')$('profSym').textContent=sym;
+
+  const acct=parseFloat($('acct').value)||0;
+  const entry=parseFloat($('entry').value)||0;
+  const stop=parseFloat($('stop').value)||0;
+  const pIn=parseFloat($('profit').value)||0;
+  const desiredProfit=profitMode==='pct'?acct*(pIn/100):pIn;
+  const spreadPct=parseFloat($('spread').value)||0;
+  const opts={stamp:$('ukStamp').checked, fx:$('fxOn').checked, spreadPct};
+  const b=brokerParams($('broker').value);
+
+  const dpPrice= entry>0 && entry<10 ? 3 : 2;
+  const riskPerShare=Math.abs(entry-stop);
+
+  // direction warning
+  let warn='';
+  if(entry>0&&stop>0){
+    if(dir==='long'&&stop>=entry)warn='For a long trade the stop should be below entry.';
+    if(dir==='short'&&stop<=entry)warn='For a short trade the stop should be above entry.';
+  }
+  $('stopFlag').textContent=warn; $('stopFlag').className=warn?'flag show':'flag';
+
+  $('rps').textContent=riskPerShare>0?fmt(riskPerShare,sym,dpPrice):'—';
+  $('sd').textContent=(riskPerShare>0&&entry>0)?(riskPerShare/entry*100).toFixed(1)+'%':'—';
+  $('tgt').textContent=desiredProfit>0?fmt(desiredProfit,sym):'—';
+
+  // broker info strip
+  $('brokerInfo').innerHTML =
+     '<div>Commission<b>'+fmt(b.buyC,sym)+' / trade</b></div>'+
+     '<div>FX fee<b>'+(b.fx*100).toFixed(2)+'%</b></div>'+
+     '<div>Stamp duty<b>'+($('ukStamp').checked?'0.5% buy':'none')+'</b></div>'+
+     '<div>Platform<b>'+b.platform+'</b></div>';
+
+  levels.forEach(p=>{
+    const riskAmt=acct*(p/100);
+    const shares=riskPerShare>0?Math.floor((riskAmt)/riskPerShare):0;
+    const sh=shares>0?shares:0;
+    const posVal=sh*entry;
+    const cost=tradeCost(b,posVal,opts);
+
+    // exit price to NET desiredProfit after all costs
+    let exitPx=NaN, movePct=NaN, rr=NaN;
+    if(sh>0 && desiredProfit>0){
+      const fixed=cost.commission+cost.stamp+cost.ptm+cost.spread; // value-independent-ish part
+      const k=opts.fx?b.fx:0;
+      let sellVal;
+      if(dir==='long') sellVal=(desiredProfit+posVal+fixed+k*posVal)/(1-k);
+      else             sellVal=(posVal-desiredProfit-fixed-k*posVal)/(1+k);
+      exitPx=sellVal/sh;
+      const perShareGain=Math.abs(exitPx-entry);
+      movePct=entry>0?perShareGain/entry*100:NaN;
+      if(riskPerShare>0)rr=perShareGain/riskPerShare;
+    }
+
+    $('sh'+p).textContent=sh.toLocaleString('en-GB');
+    $('ra'+p).textContent=fmt(riskAmt,sym);
+    $('pv'+p).textContent=fmt(posVal,sym);
+    $('tc'+p).textContent=sh>0?fmt(cost.total,sym):'—';
+    $('be'+p).textContent=(sh>0&&posVal>0)?(cost.total/posVal*100).toFixed(2)+'%':'—';
+    $('xp'+p).textContent=isFinite(exitPx)&&exitPx>0?fmt(exitPx,sym,dpPrice):'—';
+    $('mv'+p).textContent=isFinite(movePct)?(dir==='long'?'+':'−')+Math.abs(movePct).toFixed(1)+'%':'—';
+    $('rr'+p).textContent=isFinite(rr)?rr.toFixed(2)+' : 1':'—';
+  });
+
+  recommend(acct,entry,riskPerShare,opts,sym);
+}
+
+/* rank all brokers by round-trip cost on the 2% position */
+function recommend(acct,entry,rps,opts,sym){
+  const ctx=[opts.fx?'foreign FX':'no FX', opts.stamp?'UK stamp':'no stamp', opts.spreadPct>0?opts.spreadPct+'% spread':'no spread'].join(' · ');
+  $('recCtx').textContent=ctx;
+  const shares=rps>0?Math.floor((acct*0.02)/rps):0;
+  const posVal=shares*entry;
+  const list=$('recList');
+  if(shares<=0||posVal<=0){list.innerHTML='<div style="color:var(--muted);font-size:13px">Enter valid entry &amp; stop to rank brokers.</div>';$('recWhy').textContent='';return;}
+
+  const ranked=Object.keys(BROKERS).filter(k=>k!=='custom').map(k=>{
+    const c=tradeCost(BROKERS[k],posVal,opts);
+    return {k,name:BROKERS[k].name,cost:c};
+  }).sort((a,b)=>a.cost.total-b.cost.total);
+
+  list.innerHTML=ranked.slice(0,4).map((r,i)=>{
+    const c=r.cost;
+    const parts=[];
+    if(c.commission>0)parts.push('comm '+fmt(c.commission,sym));
+    if(c.fx>0)parts.push('FX '+fmt(c.fx,sym));
+    if(c.stamp>0)parts.push('stamp '+fmt(c.stamp,sym));
+    if(c.spread>0)parts.push('spread '+fmt(c.spread,sym));
+    if(c.ptm>0)parts.push('PTM '+fmt(c.ptm,sym));
+    return '<div class="recrow'+(i===0?' best':'')+'">'+(i===0?'<span class="badge">Best value</span>':'')+
+      '<div class="rank">#'+(i+1)+'</div><div class="bname">'+r.name+'</div>'+
+      '<div class="cnum">'+fmt(c.total,sym)+'</div><div class="cstat">round-trip · '+(c.total/posVal*100).toFixed(2)+'% of position</div>'+
+      '<div class="cbreak">'+(parts.length?parts.join(' · '):'no variable costs')+'</div></div>';
+  }).join('');
+
+  // why
+  const best=ranked[0], worst=ranked[ranked.length-1];
+  const save=worst.cost.total-best.cost.total;
+  let driver='commission';
+  const c=best.cost, comps={'FX conversion':c.fx,'spread':c.spread,'stamp duty':c.stamp,'commission':c.commission};
+  driver=Object.keys(comps).reduce((a,b)=>comps[b]>comps[a]?b:a,'commission');
+  $('recWhy').innerHTML='<b>'+best.name+'</b> is cheapest for this trade at '+fmt(best.cost.total,sym)+' round-trip — about '+
+    fmt(save,sym)+' less than '+worst.name+' ('+fmt(worst.cost.total,sym)+'). '+
+    (best.cost.total>0?'Dominant cost here is <b>'+driver+'</b>. ':'')+
+    (opts.fx?'Because this is a foreign-currency trade, low-FX brokers (Lightyear, Interactive Brokers, Trading 212) win. ':'For a GBP trade, zero-commission brokers win unless spread/stamp dominate. ')+
+    'Note: percentage-platform brokers (HL, AJ Bell) add ongoing annual fees not shown here.';
+}
+
+/* ---- live price ---- */
+async function fetchPrice(){
+  const market=$('market').value; let t=$('ticker').value.trim().toUpperCase();
+  if(!t){$('liveStat').textContent='Type a ticker first.';return;}
+  if(market!=='raw'&&market!==''&&!t.includes('.'))t=t+market;
+  const btn=$('fetchBtn');btn.disabled=true;btn.textContent='Fetching…';$('liveStat').textContent='Contacting market data…';
+  const yurl='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(t);
+  const proxies=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?url='+encodeURIComponent(u),u=>'https://thingproxy.freeboard.io/fetch/'+u];
+  for(const make of proxies){
+    try{
+      const r=await fetch(make(yurl));if(!r.ok)continue;
+      const j=await r.json();const res=j.chart&&j.chart.result&&j.chart.result[0];if(!res)continue;
+      const m=res.meta;let price=m.regularMarketPrice;let cur=m.currency||'';
+      if(cur==='GBp'){price=price/100;cur='GBP';}
+      const symMap={GBP:'£',USD:'$',CAD:'C$',EUR:'€',AUD:'A$'};const ps=symMap[cur]||'';const dp=price<10?3:2;
+      $('livePrice').textContent=ps+price.toLocaleString('en-GB',{minimumFractionDigits:dp,maximumFractionDigits:dp});
+      const when=new Date((m.regularMarketTime||Date.now()/1000)*1000).toLocaleString('en-GB');
+      $('liveStat').innerHTML=(m.symbol||t)+' · '+cur+' · '+when;
+      if(symMap[cur])$('ccy').value=symMap[cur];
+      $('entry').value=price.toFixed(dp);
+      // auto-set toggles: FX if not GBP, stamp only if GBP
+      $('fxOn').checked = (cur!=='GBP');
+      $('ukStamp').checked = (cur==='GBP' && market==='.L');
+      calc();btn.disabled=false;btn.textContent='Get live price';return;
+    }catch(e){}
+  }
+  $('liveStat').textContent='Couldn’t fetch automatically (browser/proxy blocked). Type the entry price manually.';
+  btn.disabled=false;btn.textContent='Get live price';
+}
+
+document.querySelectorAll('input,select').forEach(el=>{el.addEventListener('input',calc);el.addEventListener('change',calc);});
+$('ticker').addEventListener('keydown',e=>{if(e.key==='Enter')fetchPrice();});
+$('market').addEventListener('change',()=>{ $('ukStamp').checked=$('market').value==='.L'; $('fxOn').checked=!['.L'].includes($('market').value)&&$('market').value!=='raw'&&$('market').value!==''?true:$('fxOn').checked; });
+calc();
+</script>
+</body>
+</html>
